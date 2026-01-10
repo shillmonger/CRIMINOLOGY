@@ -122,7 +122,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
             );
           })}
 
-          <Link href="/pro">
+          <Link href="#">
             <motion.div
               variants={iconVariants}
               whileHover="hover"
