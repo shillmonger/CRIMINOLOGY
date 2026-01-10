@@ -161,11 +161,28 @@ export default function ImageDetailPage() {
               Back to Gallery
             </Button>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Share2 className="w-4 h-4" />
-                Share
-              </Button>
-              <Button size="sm" className="gap-2">
+              <Button 
+                size="sm" 
+                className="gap-2 cursor-pointer"
+                onClick={async () => {
+                  try {
+                    const response = await fetch(image.fileUrl);
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = image.title || 'download';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                    toast.success('Download started!');
+                  } catch (err) {
+                    console.error('Download failed:', err);
+                    toast.error('Failed to download image');
+                  }
+                }}
+              >
                 <Download className="w-4 h-4" />
                 Download
               </Button>
@@ -204,9 +221,6 @@ export default function ImageDetailPage() {
                     className="h-10 w-10 rounded-full hover:bg-muted"
                     onClick={() => setIsLiked(!isLiked)}
                   >
-                    <Heart 
-                      className={`h-5 w-5 ${isLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} 
-                    />
                   </Button>
                 </div>
                 
@@ -236,12 +250,8 @@ export default function ImageDetailPage() {
                     <p className="font-medium">{image.fileType}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-muted-foreground">Views</p>
-                    <p className="font-medium">{(Math.random() * 1000).toFixed(0)}</p>
-                  </div>
-                  <div className="space-y-1">
                     <p className="text-muted-foreground">Added</p>
-                    <p className="font-medium">1 week ago</p>
+                    <p className="font-medium">{formatDate(image.createdAt)}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-muted-foreground">Resolution</p>
