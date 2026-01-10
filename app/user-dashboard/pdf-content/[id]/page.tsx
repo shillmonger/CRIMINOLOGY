@@ -25,7 +25,6 @@ interface ContentItem {
   thumbnailUrl: string;
   fileType: 'image' | 'video' | 'pdf';
   createdAt: string;
-  views?: number;
 }
 
 export default function PDFDetailPage() {
@@ -136,16 +135,34 @@ export default function PDFDetailPage() {
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div className="flex-1 flex flex-col">
-        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm p-4 border-b border-border">
+        <div className="sticky flex items-center justify-between top-0 z-10 bg-background/80 backdrop-blur-sm p-4 border-b border-border">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => router.back()}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to PDFs
           </Button>
+
+          <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    className="gap- cursor-pointer"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = pdf.fileUrl;
+                      link.download = pdf.title.endsWith('.pdf') ? pdf.title : `${pdf.title}.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
+                  </Button>
+                </div>
         </div>
 
         <main className="flex-1 p-4 md:p-10 space-y-8 overflow-y-auto">
@@ -195,41 +212,9 @@ export default function PDFDetailPage() {
                     <Clock className="w-4 h-4" />
                     <span>Uploaded on {formatDate(pdf.createdAt)}</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <FileText className="w-4 h-4" />
-                    <span>{pdf.views || 0} views</span>
-                  </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => {
-                      navigator.clipboard.writeText(window.location.href);
-                      toast.success('Link copied to clipboard!');
-                    }}
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = pdf.fileUrl;
-                      link.download = pdf.title.endsWith('.pdf') ? pdf.title : `${pdf.title}.pdf`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
-                  >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </Button>
-                </div>
+                
                 
                 {/* PDF Description */}
                 <div className="p-4 bg-muted/30 rounded-xl space-y-2">
@@ -243,53 +228,114 @@ export default function PDFDetailPage() {
                       </span>
                     ))}
                   </div>
-                  <p className="text-sm">{pdf.description}</p>
-                </div>
-              </div>
+            </div>
             </div>
             
-            {/* Related PDFs */}
+            {/* PDF Info */}
             <div className="space-y-4">
-              <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none mb-2">Related Documents</h2>
-              <div className="space-y-4">
+              <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none mb-2">{pdf.title}</h1>
+              
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  <span>Uploaded on {formatDate(pdf.createdAt)}</span>
+                </div>
+              </div>
+              
+              
+              
+              {/* PDF Description */}
+              <div className="p-4 bg-muted/30 rounded-xl space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {pdf.tags.map((tag) => (
+                    <span 
+                      key={tag}
+                      className="px-3 py-1 text-xs font-medium rounded-full bg-muted text-muted-foreground"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-sm">{pdf.description}</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Related PDFs */}
+          <div className="space-y-6">
+            <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none mb-4">
+              Related Documents
+            </h2>
+            {relatedPdfs.length === 0 ? (
+              <div className="bg-card h-[60vh] rounded-2xl border-2 border-dashed border-border p-20 text-center">
+                <FileText className="mx-auto h-12 w-12 text-muted-foreground/20 mb-4" />
+                <h3 className="text-lg font-black uppercase italic tracking-tighter">
+                  No Related Documents Available
+                </h3>
+                <p className="text-muted-foreground text-xs mt-1 font-medium">
+                  This space will display Related PDFs
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
                 {relatedPdfs.map((item) => (
                   <motion.div
                     key={item._id}
-                    whileHover={{ x: 4 }}
-                    className="flex gap-3 cursor-pointer group"
+                    whileHover={{ x: 6 }}
+                    className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-3 rounded-2xl cursor-pointer group bg-muted/30 transition-all duration-300 border border-transparent hover:border-border"
                     onClick={() => router.push(`/user-dashboard/pdf-content/${item._id}`)}
                   >
-                    <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted">
+                    {/* Thumbnail Container - Responsive sizes */}
+                    <div className="relative w-full lg:w-32 h-48 lg:h-40 flex-shrink-0 rounded-xl overflow-hidden bg-muted border border-border shadow-md group-hover:border-primary/50 transition-colors">
                       <ImageWithFallback
                         src={item.thumbnailUrl || '/pdf-placeholder.png'}
                         alt={item.title}
                         fill
-                        className="object-cover"
+                        className="object-cover transition-transform duration-700 group-hover:scale-110"
                         fallbackSrc="/pdf-placeholder.png"
                       />
-                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                        <FileText className="w-6 h-6 text-white" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <FileText className="w-8 h-8 text-white" />
+                      </div>
+                      <div className="absolute top-2 right-2 bg-red-600 text-[10px] text-white px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-lg">
+                        PDF
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary">
-                        {item.title}
-                      </h3>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                        <span>{formatViewCount(item.views || 0)} views</span>
-                        <span>•</span>
-                        <span>Uploaded on {formatDate(item.createdAt)}</span>
+
+                    {/* Text Content - Justified on Large Screens */}
+                    <div className="flex-1 flex flex-col justify-between min-w-0 h-full py-1">
+                      <div className="space-y-2">
+                        <h3 className="font-black text-lg lg:text-xl line-clamp-2 uppercase tracking-tight italic leading-tight group-hover:text-primary transition-colors">
+                          {item.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2 lg:line-clamp-1">
+                          {item.description}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-4 lg:mt-6 pt-4 border-t border-border/50">
+                        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                          <Clock className="w-3.5 h-3.5 text-primary" />
+                          <span>{formatDate(item.createdAt)}</span>
+                        </div>
+                        
+                        {item.tags && item.tags.length > 0 && (
+                          <span className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-md font-bold uppercase tracking-tighter">
+                            {item.tags[0]}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </motion.div>
                 ))}
               </div>
-            </div>
-          </section>
-          </Suspense>
-        </main>
+            )}
+          </div>
+        </section>
+        </Suspense>
+      </main>
 
-        <Nav />
+      <Nav />
       </div>
     </div>
   );

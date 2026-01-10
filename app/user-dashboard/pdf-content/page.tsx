@@ -23,7 +23,6 @@ interface ContentItem {
   thumbnailUrl: string;
   fileType: "image" | "video" | "pdf";
   createdAt: string;
-  views?: number;
 }
 
 export default function PDFContentPage() {
@@ -155,13 +154,6 @@ export default function PDFContentPage() {
                         >
                           <Download className="w-4 h-4" />
                         </button>
-                      </div>
-
-                      {/* View Count */}
-                      <div className="absolute bottom-3 left-3 z-20">
-                        <div className="bg-black/60 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-[10px] text-white font-bold">
-                          {formatViewCount(item.views)} views
-                        </div>
                       </div>
                     </div>
 

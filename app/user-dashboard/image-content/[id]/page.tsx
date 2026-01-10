@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Share2, Download, Heart, Loader2 } from "lucide-react";
+import { ArrowLeft, ImageIcon, Download, Heart, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -192,14 +192,14 @@ export default function ImageDetailPage() {
 
         <main className="flex-1 p-4 md:p-10 space-y-12 overflow-y-auto">
           {/* Main Image Section */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-25 lg:mb-0">
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden bg-muted">
                 <ImageWithFallback
                   src={image.fileUrl}
                   alt={image.title}
                   fill
-                  className="object-cover"
+                  className="object-cover cursor-pointer"
                   priority
                   fallbackSrc="https://i.postimg.cc/dVJYS5ws/fall-back.jpg"
                 />
@@ -263,9 +263,21 @@ export default function ImageDetailPage() {
           </section>
           
           {/* Related Images */}
-          {relatedImages.length > 0 && (
-            <section className="space-y-6">
-              <h2 className="text-xl font-bold tracking-tight">You may also like</h2>
+          <section className="space-y-6 mb-25 lg:mb-0">
+            <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none mb-4">
+              You May Also Like
+            </h2>
+            {relatedImages.length === 0 ? (
+              <div className="bg-card h-[40vh] rounded-2xl border-2 border-dashed border-border p-8 text-center flex flex-col items-center justify-center">
+                <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground/20 mb-4" />
+                <h3 className="text-lg font-black uppercase italic tracking-tighter">
+                  No Related Images Available
+                </h3>
+                <p className="text-muted-foreground text-xs mt-1 font-medium">
+                  This space will display related images
+                </p>
+              </div>
+            ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {relatedImages.map((item) => (
                   <motion.div
@@ -291,8 +303,8 @@ export default function ImageDetailPage() {
                   </motion.div>
                 ))}
               </div>
-            </section>
-          )}
+            )}
+          </section>
         </main>
 
         <Nav />

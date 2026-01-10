@@ -154,11 +154,6 @@ export default function VideoContentPage() {
                           <Play className="w-7 h-7 text-white fill-white ml-1" />
                         </div>
                       </div>
-
-                      {/* View Count */}
-                      <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded text-[10px] text-white font-bold">
-                        {formatViewCount(item.views)}
-                      </div>
                     </div>
 
                     <div className="flex gap-3 px-1">
