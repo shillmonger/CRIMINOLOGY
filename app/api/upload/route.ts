@@ -1,0 +1,119 @@
+import { NextResponse } from "next/server";
+import { writeFile } from 'fs/promises';
+import { join } from 'path';
+import cloudinary, { type UploadApiOptions } from "@/lib/cloudinary";
+import { connectDB } from "@/lib/mongodb";
+import Content from "@/models/Content";
+
+const PDF_THUMBNAIL_URL = 'https://i.postimg.cc/pTC8whf0/download-(1).jpg';
+
+export async function POST(req: Request) {
+  try {
+    await connectDB();
+    
+    const formData = await req.formData();
+    const file = formData.get("file") as File;
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const tags = (formData.get("tags") as string)?.split(',').map(tag => tag.trim());
+    const fileType = formData.get("fileType") as 'image' | 'video' | 'pdf';
+
+    if (!file) {
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
+
+    if (!title || !description) {
+      return NextResponse.json(
+        { error: "Title and description are required" }, 
+        { status: 400 }
+      );
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    // Generate a clean filename for the public ID
+    const cleanTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    
+    // Upload the main file to Cloudinary
+    const result = await new Promise<any>((resolve, reject) => {
+     const uploadOptions: UploadApiOptions = {
+  folder: "criminology",
+  resource_type: fileType === 'pdf' ? 'raw' : fileType as 'image' | 'video',
+  public_id: `${cleanTitle}_${Date.now()}`,
+  chunk_size: 10485760, // 10MB chunks for large files
+};
+
+      const uploadStream = cloudinary.uploader.upload_stream(
+        uploadOptions,
+        (error, result) => {
+          if (error) reject(error);
+          if (!result) {
+            reject(new Error('Upload failed: No result from Cloudinary'));
+            return;
+          }
+          resolve(result);
+        }
+      ).end(buffer);
+    });
+
+    let thumbnailUrl = result.secure_url; // Default to file URL for images
+
+    // Handle video thumbnail generation
+    if (fileType === 'video') {
+      try {
+        // Generate thumbnail using Cloudinary SDK with proper format and transformations
+        thumbnailUrl = cloudinary.url(result.public_id, {
+          resource_type: "video",
+          format: "jpg",
+          transformation: [
+            { start_offset: "10%" },  // Get frame at 10% of video duration
+            { width: 800, height: 450, crop: "fill" }  // Standard 16:9 aspect ratio
+          ]
+        });
+      } catch (error) {
+        console.error('Error generating video thumbnail:', error);
+        // Fallback to a default thumbnail if generation fails
+        thumbnailUrl = 'https://via.placeholder.com/800x450?text=Video+Thumbnail';
+      }
+    }
+    // Set PDF thumbnail to the static image URL
+    else if (fileType === 'pdf') {
+      thumbnailUrl = PDF_THUMBNAIL_URL;
+    }
+
+    // Save to database
+    const content = new Content({
+      title,
+      description,
+      tags,
+      fileUrl: result.secure_url,
+      thumbnailUrl,
+      fileType,
+      publicId: result.public_id,
+      uploadedBy: 'admin', // You can update this with actual user ID
+    });
+
+    await content.save();
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: content._id,
+        title: content.title,
+        url: content.fileUrl,
+        type: content.fileType,
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Upload error:', error);
+    return NextResponse.json(
+      { 
+        error: error.message || 'Failed to upload file',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }, 
+      { status: 500 }
+    );
+  }
+}
