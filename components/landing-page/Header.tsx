@@ -97,7 +97,13 @@ export default function Header() {
             <button
               onClick={(e) => {
                 e.preventDefault();
-                handleNavigationWithScroll(pathname, "/", "why-this-platform", router, closeMobileMenu);
+                handleNavigationWithScroll(
+                  pathname,
+                  "/",
+                  "why-this-platform",
+                  router,
+                  closeMobileMenu
+                );
               }}
               className={`px-4 py-2 text-[14px] font-bold tracking-wide transition-all cursor-pointer rounded-full hover:text-foreground ${
                 activeSection === "why-this-platform"
@@ -111,7 +117,13 @@ export default function Header() {
             <button
               onClick={(e) => {
                 e.preventDefault();
-                handleNavigationWithScroll(pathname, "/", "explore-library", router, closeMobileMenu);
+                handleNavigationWithScroll(
+                  pathname,
+                  "/",
+                  "explore-library",
+                  router,
+                  closeMobileMenu
+                );
               }}
               className={`px-4 py-2 text-[14px] font-bold tracking-wide transition-all rounded-full cursor-pointer hover:text-foreground ${
                 activeSection === "explore-library"
@@ -132,20 +144,40 @@ export default function Header() {
             >
               Subscriptions
             </Link>
+            <Link
+              href="/landing-page/founders"
+              className={`px-4 py-2 text-[14px] font-bold tracking-wide transition-all cursor-pointer rounded-full hover:text-foreground ${
+                isPageActive("/landing-page/founders")
+                  ? "text-foreground bg-white dark:bg-zinc-800 shadow-sm"
+                  : "text-muted-foreground"
+              }`}
+            >
+              Our Founders
+            </Link>
           </nav>
 
           {/* AUTH BUTTONS */}
           <div className="hidden md:flex items-center gap-3 ml-4">
-            <Button asChild variant="secondary" className="px-6 py-6 text-[15px] font-semibold rounded-xl cursor-pointer">
+            <Button
+              asChild
+              variant="secondary"
+              className="px-6 py-6 text-[15px] font-semibold rounded-xl cursor-pointer"
+            >
               <Link href="/auth-page/login">Login</Link>
             </Button>
-            <Button asChild className="px-6 py-6 text-[15px] font-semibold rounded-xl cursor-pointer">
+            <Button
+              asChild
+              className="px-6 py-6 text-[15px] font-semibold rounded-xl cursor-pointer"
+            >
               <Link href="/auth-page/signup">Sign Up</Link>
             </Button>
           </div>
 
           {/* MOBILE TOGGLE */}
-          <button onClick={() => setMobileMenuOpen(true)} className="md:hidden h-12 flex items-center justify-center">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="md:hidden h-12 flex items-center justify-center"
+          >
             <Menu className="h-6 w-6" />
           </button>
         </div>
@@ -155,7 +187,9 @@ export default function Header() {
       <div
         onClick={closeMobileMenu}
         className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-500 md:hidden ${
-          mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          mobileMenuOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
         }`}
       />
 
@@ -164,7 +198,10 @@ export default function Header() {
           mobileMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <button onClick={closeMobileMenu} className="absolute top-6 right-6 rounded-lg p-2 text-foreground hover:bg-muted transition">
+        <button
+          onClick={closeMobileMenu}
+          className="absolute top-6 right-6 rounded-lg p-2 text-foreground hover:bg-muted transition"
+        >
           <X className="h-6 w-6" />
         </button>
 
@@ -174,7 +211,9 @@ export default function Header() {
               href="/"
               onClick={closeMobileMenu}
               className={`hover:text-primary transition-colors ${
-                pathname === "/" && activeSection === "home" ? "text-primary font-semibold" : ""
+                pathname === "/" && activeSection === "home"
+                  ? "text-primary font-semibold"
+                  : ""
               }`}
             >
               Home
@@ -182,10 +221,18 @@ export default function Header() {
             <button
               onClick={(e) => {
                 e.preventDefault();
-                handleNavigationWithScroll(pathname, "/", "explore-library", router, closeMobileMenu);
+                handleNavigationWithScroll(
+                  pathname,
+                  "/",
+                  "explore-library",
+                  router,
+                  closeMobileMenu
+                );
               }}
               className={`hover:text-primary transition-colors text-left w-full cursor-pointer ${
-                activeSection === "explore-library" ? "text-primary font-semibold" : ""
+                activeSection === "explore-library"
+                  ? "text-primary font-semibold"
+                  : ""
               }`}
             >
               Explore library
@@ -193,19 +240,40 @@ export default function Header() {
             <button
               onClick={(e) => {
                 e.preventDefault();
-                handleNavigationWithScroll(pathname, "/", "why-this-platform", router, closeMobileMenu);
+                handleNavigationWithScroll(
+                  pathname,
+                  "/",
+                  "why-this-platform",
+                  router,
+                  closeMobileMenu
+                );
               }}
               className={`hover:text-primary transition-colors text-left w-full cursor-pointer ${
-                activeSection === "why-this-platform" ? "text-primary font-semibold" : ""
+                activeSection === "why-this-platform"
+                  ? "text-primary font-semibold"
+                  : ""
               }`}
             >
               Why this Platform
             </button>
             <Link
+              href="/landing-page/founders"
+              onClick={closeMobileMenu}
+              className={`hover:text-primary transition-colors ${
+                isPageActive("/landing-page/founders")
+                  ? "text-primary font-semibold"
+                  : ""
+              }`}
+            >
+              Our Founders
+            </Link>
+            <Link
               href="/landing-page/subscriptions"
               onClick={closeMobileMenu}
               className={`hover:text-primary transition-colors ${
-                isPageActive("/landing-page/subscriptions") ? "text-primary font-semibold" : ""
+                isPageActive("/landing-page/subscriptions")
+                  ? "text-primary font-semibold"
+                  : ""
               }`}
             >
               Our Subscriptions
@@ -213,11 +281,23 @@ export default function Header() {
           </div>
           {/* Auth buttons bottom mobile */}
           <div className="flex flex-col gap-3">
-             <Button variant="outline" asChild className="py-6 px-6 text-[17px] font-semibold rounded-xl w-full">
-              <Link href="/auth-page/login" onClick={closeMobileMenu}>Login</Link>
+            <Button
+              variant="outline"
+              asChild
+              className="py-6 px-6 text-[17px] font-semibold rounded-xl w-full"
+            >
+              <Link href="/auth-page/login" onClick={closeMobileMenu}>
+                Login
+              </Link>
             </Button>
-            <Button size="lg" asChild className="w-full py-6 text-[17px] font-semibold rounded-xl">
-              <Link href="/auth-page/signup" onClick={closeMobileMenu}>Sign Up</Link>
+            <Button
+              size="lg"
+              asChild
+              className="w-full py-6 text-[17px] font-semibold rounded-xl"
+            >
+              <Link href="/auth-page/signup" onClick={closeMobileMenu}>
+                Sign Up
+              </Link>
             </Button>
           </div>
         </div>

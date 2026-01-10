@@ -163,6 +163,14 @@ export default function Footer() {
                 Help Center
               </Link>
             </li>
+            <li>
+              <Link
+                href="/landing-page/founders"
+                className="hover:text-primary transition-colors"
+              >
+                Our Founders
+              </Link>
+            </li>
           </ul>
         </div>
       </div>
