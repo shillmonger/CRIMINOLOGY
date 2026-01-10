@@ -1,10 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Content from "@/models/Content";
 import { ObjectId } from 'mongodb';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+// Update the context type to match Next.js 13+ App Router expectations
+type RouteParams = {
+  params: {
+    id: string;
+  };
+};
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   console.log('GET request received for content ID:', params.id);
@@ -42,23 +51,32 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   console.log('DELETE request received for content ID:', params.id);
   
+  // Check if user is authenticated
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json(
+      { error: "You must be signed in to delete content" },
+      { status: 401 }
+    );
+  }
+  
+  // Validate ID format
+  if (!ObjectId.isValid(params.id)) {
+    return NextResponse.json(
+      { error: "Invalid content ID format" },
+      { status: 400 }
+    );
+  }
+  
   try {
-    // Validate ID format
-    if (!ObjectId.isValid(params.id)) {
-      return NextResponse.json(
-        { error: "Invalid content ID format" },
-        { status: 400 }
-      );
-    }
-    
     await connectDB();
     
-    // Find and delete the content
+    // Delete the content
     const deletedContent = await Content.findByIdAndDelete(params.id);
     
     if (!deletedContent) {
@@ -67,13 +85,12 @@ export async function DELETE(
         { status: 404 }
       );
     }
-    
-    console.log('Content deleted successfully:', deletedContent._id);
+
+    console.log('Successfully deleted content:', params.id);
     return NextResponse.json(
       { message: "Content deleted successfully" },
       { status: 200 }
     );
-    
   } catch (error) {
     console.error('Error deleting content:', error);
     return NextResponse.json(
