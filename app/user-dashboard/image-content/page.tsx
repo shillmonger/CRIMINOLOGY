@@ -2,13 +2,10 @@
 
 import { useState, useEffect } from "react";
 import {
-  ChevronRight,
   Plus,
   Maximize2,
-  Search,
   FileText,
   Image as ImageIcon,
-  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -43,7 +40,6 @@ export default function ImageContentPage() {
         const response = await fetch("/api/content");
         if (!response.ok) throw new Error("Failed to fetch images");
         const data = await response.json();
-        // Filter to only include images
         const imageContent = data.filter(
           (item: ContentItem) => item.fileType === "image"
         );
@@ -63,7 +59,6 @@ export default function ImageContentPage() {
     router.push(`/user-dashboard/image-content/${id}`);
   };
 
-  // Filter images based on search query
   const filteredImages = images.filter(
     (item) =>
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -76,7 +71,6 @@ export default function ImageContentPage() {
     setSearchQuery(query);
   };
 
-  // Show skeleton while loading
   if (isLoading) {
     return (
       <div className="flex min-h-screen bg-background text-foreground">
@@ -90,9 +84,6 @@ export default function ImageContentPage() {
                   <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none mb-2">
                     Image Gallery
                   </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Loading images...
-                  </p>
                 </div>
               </div>
               <ImageGallerySkeleton />
@@ -112,7 +103,6 @@ export default function ImageContentPage() {
         <Header onSearch={handleSearch} />
 
         <main className="flex-1 p-4 md:p-10 space-y-12 overflow-y-auto">
-          {/* Image Gallery */}
           <section className="space-y-6">
             <div className="flex items-center justify-between px-2">
               <div className="space-y-1">
@@ -137,45 +127,51 @@ export default function ImageContentPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 mb-25">
+              /* MASONRY WRAPPER: columns-2 to columns-6 handles the Pinterest flow */
+              <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-4 space-y-4 mb-25">
                 {filteredImages.map((item) => (
                   <motion.div
                     key={item._id}
-                    whileHover={{ y: -8 }}
-                    className="group cursor-pointer space-y-3"
+                    whileHover={{ y: -4 }}
+                    /* break-inside-avoid prevents cards from splitting across columns */
+                    className="break-inside-avoid group cursor-pointer mb-4"
                     onClick={() => handleImageClick(item._id)}
                   >
-                    <div className="relative aspect-[4/5] rounded-2xl overflow-hidden shadow-lg border border-border bg-muted">
+                    <div className="relative rounded-2xl overflow-hidden shadow-sm border border-border bg-muted">
+                      {/* Using <img> or Image without 'fill' and 'aspect ratio' 
+                          allows the height to be dynamic 
+                      */}
                       <ImageWithFallback
                         src={item.fileUrl}
                         alt={item.title}
-                        fill
-                        className="object-cover transition-all duration-700 group-hover:scale-110"
+                        width={500}
+                        height={700}
+                        className="w-full h-auto object-cover transition-all duration-700 group-hover:scale-105"
                         fallbackSrc="https://i.postimg.cc/dVJYS5ws/fall-back.jpg"
                       />
 
-                      {/* Plus Button */}
-                      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                        <div className="bg-primary p-2 rounded-xl shadow-xl">
-                          <Plus className="w-4 h-4 text-primary-foreground" />
+                      {/* Plus Button Overlay */}
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                        <div className="bg-primary p-1.5 rounded-lg shadow-xl">
+                          <Plus className="w-3.5 h-3.5 text-primary-foreground" />
                         </div>
                       </div>
 
                       {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <div className="bg-white/20 backdrop-blur-md p-4 rounded-full border border-white/30">
-                          <Maximize2 className="w-6 h-6 text-white" />
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="bg-white/20 backdrop-blur-sm p-3 rounded-full border border-white/30">
+                          <Maximize2 className="w-5 h-5 text-white" />
                         </div>
                       </div>
                     </div>
 
-                    <div className="px-1">
-                      <h3 className="text-sm font-bold truncate group-hover:text-primary transition-colors">
+                    <div className="mt-2 px-1">
+                      <h3 className="text-xs font-bold truncate group-hover:text-primary transition-colors">
                         {item.title}
                       </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <ImageIcon className="w-3 h-3 text-blue-400" />
-                        <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <ImageIcon className="w-2.5 h-2.5 text-blue-400" />
+                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
                           {item.tags.length > 0 ? item.tags[0] : "Image"}
                         </p>
                       </div>
@@ -185,8 +181,6 @@ export default function ImageContentPage() {
               </div>
             )}
           </section>
-
-          {/* Recent views removed - using database content only */}
         </main>
 
         <Nav />
