@@ -3,8 +3,7 @@
 
 import { notFound } from "next/navigation";
 import { useState, useEffect } from "react";
-import { RefreshCw } from "lucide-react";
-import { ArrowLeft, Share2, Download, FileText, Clock } from "lucide-react";
+import { RefreshCw, ArrowLeft, Download, FileText, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -44,7 +43,6 @@ export default function PDFDetailPage() {
         setIsLoading(true);
         setError(null);
         
-        // Fetch the specific PDF using the API endpoint
         const response = await fetch(`/api/content/${params.id}`);
         
         if (!response.ok) {
@@ -60,16 +58,14 @@ export default function PDFDetailPage() {
         
         setPdf(data);
         
-        // Fetch related PDFs (other PDFs from the database)
         const relatedResponse = await fetch('/api/content');
         if (relatedResponse.ok) {
           const allContent = await relatedResponse.json();
-          // Get other PDFs (excluding the current one)
           const otherPdfs = allContent.filter(
             (item: ContentItem) => 
               item.fileType === 'pdf' && 
               item._id !== params.id
-          ).slice(0, 3); // Limit to 3 related PDFs
+          ).slice(0, 3);
           setRelatedPdfs(otherPdfs);
         }
       } catch (error) {
@@ -94,18 +90,7 @@ export default function PDFDetailPage() {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  const formatViewCount = (count: number = 0) => {
-    if (count >= 1000000) {
-      return `${(count / 1000000).toFixed(1)}M`;
-    } else if (count >= 1000) {
-      return `${(count / 1000).toFixed(1)}K`;
-    }
-    return count.toString();
-  };
-
-  if (isLoading) {
-    return <PDFDetailSkeleton />;
-  }
+  if (isLoading) return <PDFDetailSkeleton />;
 
   if (error) {
     return (
@@ -114,10 +99,7 @@ export default function PDFDetailPage() {
           <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-4">
             <p className="font-medium">Error: {error}</p>
           </div>
-          <Button 
-            onClick={() => window.location.reload()}
-            className="gap-2"
-          >
+          <Button onClick={() => window.location.reload()} className="gap-2">
             <RefreshCw className="w-4 h-4" />
             Try Again
           </Button>
@@ -126,15 +108,14 @@ export default function PDFDetailPage() {
     );
   }
 
-  if (!pdf) {
-    return notFound();
-  }
+  if (!pdf) return notFound();
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div className="flex-1 flex flex-col">
+        {/* Header/Actions */}
         <div className="sticky flex items-center justify-between top-0 z-10 bg-background/80 backdrop-blur-sm p-4 border-b border-border">
           <Button 
             variant="ghost" 
@@ -146,123 +127,72 @@ export default function PDFDetailPage() {
             Back to PDFs
           </Button>
 
-          <div className="flex items-center gap-2">
-                  <Button 
-                    size="sm" 
-                    className="gap- cursor-pointer"
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = pdf.fileUrl;
-                      link.download = pdf.title.endsWith('.pdf') ? pdf.title : `${pdf.title}.pdf`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
-                  >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </Button>
-                </div>
+          <Button 
+            size="sm" 
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = pdf.fileUrl;
+              link.download = pdf.title.endsWith('.pdf') ? pdf.title : `${pdf.title}.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download
+          </Button>
         </div>
 
-        <main className="flex-1 p-4 md:p-10 space-y-8 overflow-y-auto">
+        <main className="flex-1 p-4 md:p-10 space-y-8 overflow-y-auto mb-25 lg:mb-0">
           <Suspense fallback={<PDFDetailSkeleton />}>
-          {/* PDF Viewer Section */}
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-25 lg:mb-0">
-            <div className="lg:col-span-2 space-y-6">
-              {/* PDF Viewer */}
-              <div className="relative w-full bg-background rounded-2xl overflow-hidden border border-border shadow-lg">
-                <iframe
-                  src={`https://docs.google.com/gview?url=${encodeURIComponent(pdf.fileUrl)}&embedded=true`}
-                  className="w-full h-[70vh]"
-                  title={`PDF Viewer - ${pdf.title}`}
-                  allowFullScreen
-                >
-                  <p>Your browser does not support iframes. <a href={pdf.fileUrl} download className="text-primary hover:underline">Download the PDF</a> instead.</p>
-                </iframe>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="text-center p-6 bg-background/80 backdrop-blur-sm rounded-xl border border-border shadow-lg pointer-events-auto">
-                    <FileText className="w-12 h-12 mx-auto text-primary mb-4" />
-                    <p className="text-foreground font-medium mb-4">{pdf.title}</p>
-                    <a 
-                      href={pdf.fileUrl} 
-                      download
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download PDF
-                    </a>
-                  </div>
-                </div>
-                <a 
-                  href={pdf.fileUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="absolute inset-0 z-10"
-                  onClick={(e) => e.stopPropagation()}
-                ></a>
-              </div>
-              
-              {/* PDF Info */}
-              <div className="space-y-4">
-                <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none mb-2">{pdf.title}</h1>
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 ">
+              <div className="lg:col-span-2 space-y-6">
                 
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
+                {/* 1. PDF Viewer Container */}
+                <div className="relative w-full bg-background rounded-2xl overflow-hidden border border-border shadow-lg">
+                  <iframe
+                    src={`https://docs.google.com/gview?url=${encodeURIComponent(pdf.fileUrl)}&embedded=true`}
+                    className="w-full h-[70vh]"
+                    title={`PDF Viewer - ${pdf.title}`}
+                  >
+                    <p>Your browser does not support iframes. <a href={pdf.fileUrl} download className="text-primary hover:underline">Download PDF</a></p>
+                  </iframe>
+                </div>
+                
+                {/* 2. Metadata Section (Cleaned up as per your request) */}
+                <div className="space-y-4">
+                  {/* Title */}
+                  <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tighter italic leading-none">
+                    {pdf.title}
+                  </h1>
+                  
+                  {/* Date */}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="w-4 h-4" />
                     <span>Uploaded on {formatDate(pdf.createdAt)}</span>
                   </div>
-                </div>
-                
-                
-                
-                {/* PDF Description */}
-                <div className="p-4 bg-muted/30 rounded-xl space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    {pdf.tags.map((tag) => (
-                      <span 
-                        key={tag}
-                        className="px-3 py-1 text-xs font-medium rounded-full bg-muted text-muted-foreground"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+
+                  {/* Tags and Description */}
+                  <div className="p-6 bg-muted/30 rounded-2xl space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      {pdf.tags.map((tag) => (
+                        <span 
+                          key={tag}
+                          className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md bg-background border border-border text-foreground"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {pdf.description}
+                    </p>
                   </div>
-            </div>
-            </div>
-            
-            {/* PDF Info */}
-            <div className="space-y-4">
-              <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none mb-2">{pdf.title}</h1>
-              
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  <span>Uploaded on {formatDate(pdf.createdAt)}</span>
                 </div>
               </div>
-              
-              
-              
-              {/* PDF Description */}
-              <div className="p-4 bg-muted/30 rounded-xl space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {pdf.tags.map((tag) => (
-                    <span 
-                      key={tag}
-                      className="px-3 py-1 text-xs font-medium rounded-full bg-muted text-muted-foreground"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-sm">{pdf.description}</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Related PDFs */}
-          <div className="space-y-6">
+
+              {/* Related Documents Sidebar Area (Optional positioning) */}
+<div className="space-y-6">
             <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none mb-4">
               Related Documents
             </h2>
@@ -331,11 +261,12 @@ export default function PDFDetailPage() {
               </div>
             )}
           </div>
-        </section>
-        </Suspense>
-      </main>
 
-      <Nav />
+            </section>
+          </Suspense>
+        </main>
+
+        <Nav />
       </div>
     </div>
   );
