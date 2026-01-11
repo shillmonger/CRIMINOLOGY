@@ -1,5 +1,7 @@
 import mongoose, { Document } from 'mongoose';
 
+export type SourceType = 'upload' | 'external_link';
+
 export interface IContent extends Document {
   title: string;
   description: string;
@@ -7,7 +9,8 @@ export interface IContent extends Document {
   fileUrl: string;
   thumbnailUrl: string;
   fileType: 'image' | 'video' | 'pdf';
-  publicId: string;
+  sourceType: SourceType;
+  publicId?: string;
   uploadedBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -21,7 +24,20 @@ const contentSchema = new mongoose.Schema<IContent>(
     fileUrl: { type: String, required: true },
     thumbnailUrl: { type: String, required: true },
     fileType: { type: String, enum: ['image', 'video', 'pdf'], required: true },
-    publicId: { type: String, required: true },
+    sourceType: { type: String, enum: ['upload', 'external_link'], required: true, default: 'upload' },
+    publicId: {
+  type: String,
+  validate: {
+    validator: function (value: string) {
+      if (this.sourceType === 'upload') {
+        return !!value;
+      }
+      return true;
+    },
+    message: 'publicId is required for uploaded files',
+  },
+},
+ // Only required for uploaded files
     uploadedBy: { type: String, required: true, default: 'admin' },
   },
   { timestamps: true }

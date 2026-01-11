@@ -3,24 +3,101 @@ import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import cloudinary, { type UploadApiOptions } from "@/lib/cloudinary";
 import { connectDB } from "@/lib/mongodb";
-import Content from "@/models/Content";
+import Content, { SourceType } from "@/models/Content";
 
 const PDF_THUMBNAIL_URL = 'https://i.postimg.cc/pTC8whf0/download-(1).jpg';
+
+// Helper function to get video ID and thumbnail from different platforms
+const getVideoInfo = (url: string): { videoId: string; thumbnailUrl: string } | null => {
+  try {
+    const urlObj = new URL(url);
+    
+    // YouTube
+    if (urlObj.hostname.includes('youtube.com') || urlObj.hostname.includes('youtu.be')) {
+      let videoId = '';
+      
+      if (urlObj.hostname.includes('youtube.com')) {
+        videoId = urlObj.searchParams.get('v') || '';
+      } else if (urlObj.hostname.includes('youtu.be')) {
+        videoId = urlObj.pathname.slice(1);
+      }
+      
+      if (!videoId) return null;
+      
+      return {
+        videoId,
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+      };
+    }
+    
+    // Vimeo
+    if (urlObj.hostname.includes('vimeo.com')) {
+      const videoId = urlObj.pathname.split('/').pop();
+      if (!videoId) return null;
+      
+      return {
+        videoId,
+        thumbnailUrl: `https://vumbnail.com/${videoId}.jpg`
+      };
+    }
+    
+    // Add more platforms as needed
+    
+    return null;
+  } catch (error) {
+    console.error('Error parsing video URL:', error);
+    return null;
+  }
+};
 
 export async function POST(req: Request) {
   try {
     await connectDB();
     
     const formData = await req.formData();
-    const file = formData.get("file") as File;
+    const file = formData.get("file") as File | null;
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
     const tags = (formData.get("tags") as string)?.split(',').map(tag => tag.trim());
     const fileType = formData.get("fileType") as 'image' | 'video' | 'pdf';
+    const videoUrl = formData.get("videoUrl") as string | null;
 
-    if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    if (!file && !videoUrl) {
+      return NextResponse.json({ error: "No file or video URL provided" }, { status: 400 });
     }
+    
+    // Handle external video link
+    if (videoUrl) {
+      const videoInfo = getVideoInfo(videoUrl);
+      if (!videoInfo) {
+        return NextResponse.json({ error: "Invalid or unsupported video URL" }, { status: 400 });
+      }
+      
+      const content = new Content({
+        title,
+        description,
+        tags,
+        fileUrl: videoUrl,
+        thumbnailUrl: videoInfo.thumbnailUrl,
+        fileType: 'video',
+        sourceType: 'external_link',
+        uploadedBy: 'admin',
+      });
+      
+      await content.save();
+      
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: content._id,
+          title: content.title,
+          url: content.fileUrl,
+          type: content.fileType,
+        }
+      });
+    }
+    
+    // Handle file upload (original functionality)
 
     if (!title || !description) {
       return NextResponse.json(
@@ -29,8 +106,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const bytes = await file?.arrayBuffer();
+if (!bytes) {
+  return NextResponse.json(
+    { error: "No file data available" },
+    { status: 400 }
+  );
+}
+const buffer = Buffer.from(bytes);
 
     // Generate a clean filename for the public ID
     const cleanTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -90,8 +173,9 @@ export async function POST(req: Request) {
       fileUrl: result.secure_url,
       thumbnailUrl,
       fileType,
-      publicId: result.public_id,
-      uploadedBy: 'admin', // You can update this with actual user ID
+      publicId: result.public_id, // Only set publicId for uploaded files
+      sourceType: 'upload',
+      uploadedBy: 'admin',
     });
 
     await content.save();

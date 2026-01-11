@@ -21,12 +21,12 @@ export default function AdminContentUploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  // Form States
+  const [uploadType, setUploadType] = useState<'file' | 'link'>('file');
+  const [videoUrl, setVideoUrl] = useState('');
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    tags: ""
+    tags: "",
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,81 +40,93 @@ export default function AdminContentUploadPage() {
     setIsUploading(false);
 
     if (type === "image") {
-  setFormData({
-    title: "This is demo image preview",
-    description: "This is a demo image preview shown for review purposes only.",
-    tags: "demo, image, preview"
-  });
-} else if (type === "pdf") {
-  setFormData({
-    title: "This is demo PDF preview",
-    description: "This is a demo PDF preview shown for review purposes only.",
-    tags: "demo, pdf, preview"
-  });
-} else {
-  setFormData({
-    title: "This is demo file preview",
-    description: "This is a demo file preview shown for review purposes only.",
-    tags: "demo, file, preview"
-  });
-}
-
+      setFormData({
+        title: "This is demo image preview",
+        description: "This is a demo image preview shown for review purposes only.",
+        tags: "demo, image, preview"
+      });
+    } else if (type === "pdf") {
+      setFormData({
+        title: "This is demo PDF preview",
+        description: "This is a demo PDF preview shown for review purposes only.",
+        tags: "demo, pdf, preview"
+      });
+    } else {
+      setFormData({
+        title: "This is demo file preview",
+        description: "This is a demo file preview shown for review purposes only.",
+        tags: "demo, file, preview"
+      });
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
-
-    const fileType = selectedFile.type;
-    
-    // Validate file type
-    let isValid = true;
-    if (selectedType === "image" && !fileType.startsWith("image/")) {
-      toast.error("Invalid File: Please select an Image");
-      isValid = false;
-    } else if (selectedType === "video" && !fileType.startsWith("video/")) {
-      toast.error("Invalid File: Please select a Video");
-      isValid = false;
-    } else if (selectedType === "pdf" && fileType !== "application/pdf") {
-      toast.error("Invalid File: Please select a PDF document");
-      isValid = false;
+    if (selectedFile) {
+      setFile(selectedFile);
+      setFileName(selectedFile.name);
+      
+      // Create preview URL for images and videos
+      if (selectedFile.type.startsWith('image/') || selectedFile.type.startsWith('video/')) {
+        const url = URL.createObjectURL(selectedFile);
+        setPreviewUrl(url);
+      } else {
+        setPreviewUrl(null);
+      }
     }
+  };
 
-    if (!isValid) return;
-
-    // Set file and preview
-    setFile(selectedFile);
-    setFileName(selectedFile.name);
+  const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setVideoUrl(url);
     
-    // Create preview URL
-    const url = URL.createObjectURL(selectedFile);
-    setPreviewUrl(url);
-
-    // Simulate upload progress (optional, can be removed if using actual upload progress)
-    setIsUploading(true);
-    setUploadProgress(0);
-
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          return 100;
+    try {
+      // Try to generate preview for YouTube and Vimeo
+      if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com')) {
+        let videoId = '';
+        
+        if (url.includes('youtube.com')) {
+          const urlObj = new URL(url);
+          videoId = urlObj.searchParams.get('v') || '';
+          // Handle youtu.be short URLs
+          if (!videoId && urlObj.hostname === 'youtu.be') {
+            videoId = urlObj.pathname.split('/').filter(Boolean)[0] || '';
+          }
+        } else if (url.includes('youtu.be')) {
+          const urlObj = new URL(url);
+          videoId = urlObj.pathname.split('/').filter(Boolean)[0] || '';
+        } else if (url.includes('vimeo.com')) {
+          const urlObj = new URL(url);
+          videoId = urlObj.pathname.split('/').filter(Boolean).pop() || '';
         }
-        return prev + 10;
-      });
-    }, 100);
+        
+        if (videoId) {
+          const thumbnailUrl = url.includes('vimeo.com')
+            ? `https://vumbnail.com/${videoId}.jpg`
+            : `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+          
+          setPreviewUrl(thumbnailUrl);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error processing video URL:', error);
+    }
     
-    // Clean up function
-    return () => {
-      clearInterval(interval);
-      URL.revokeObjectURL(url);
-    };
+    setPreviewUrl(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return toast.error("Please upload a file first");
+    
+    if (uploadType === 'file' && !file) {
+      return toast.error("Please upload a file first");
+    }
+    
+    if (uploadType === 'link' && !videoUrl) {
+      return toast.error("Please enter a video URL");
+    }
+    
     if (isUploading) return toast.error("Please wait for upload to complete");
     if (!formData.title || !formData.description) {
       return toast.error("Title and description are required");
@@ -124,11 +136,17 @@ export default function AdminContentUploadPage() {
     
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append("file", file);
+      
+      if (uploadType === 'file' && file) {
+        formDataToSend.append("file", file);
+      } else if (uploadType === 'link') {
+        formDataToSend.append("videoUrl", videoUrl);
+      }
+      
       formDataToSend.append("title", formData.title);
       formDataToSend.append("description", formData.description);
       formDataToSend.append("tags", formData.tags);
-      formDataToSend.append("fileType", selectedType);
+      formDataToSend.append("fileType", uploadType === 'link' ? 'video' : selectedType);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -152,6 +170,7 @@ export default function AdminContentUploadPage() {
       setFile(null);
       setFileName(null);
       setPreviewUrl(null);
+      setVideoUrl("");
       
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -215,124 +234,189 @@ export default function AdminContentUploadPage() {
 
                 {/* 2. Upload Area */}
                 <div className="bg-card p-8 rounded-2xl border border-border flex flex-col items-center justify-center text-center min-h-[250px]">
-                  {!fileName ? (
-                    <>
-                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
-                        <Upload size={32} />
-                      </div>
-                      <h2 className="text-xl font-bold mb-1">Select your {selectedType}</h2>
-                      <p className="text-muted-foreground text-sm mb-6">File validation is active for {selectedType} format</p>
-                      <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="bg-foreground text-background px-8 py-3 rounded-full font-bold hover:scale-105 transition-transform cursor-pointer"
-                      >
-                        Browse Files
-                      </button>
-                    </>
-                  ) : (
-                    <div className="w-full space-y-4">
-                      <div className="flex items-center justify-between bg-muted/50 p-4 rounded-xl border border-border">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-card rounded-lg shadow-sm border border-border">
-                            {selectedType === "image" && <ImageIcon className="text-foreground" size={20} />}
-                            {selectedType === "video" && <Video className="text-foreground" size={20} />}
-                            {selectedType === "pdf" && <FileText className="text-foreground" size={20} />}
-                          </div>
-                          <div className="text-left">
-                            <p className="text-sm font-bold truncate max-w-[200px]">{fileName}</p>
-                            <p className="text-[10px] uppercase font-black text-green-600">Ready to sync</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => {
-                            setFileName(null);
-                            setPreviewUrl(null);
-                            setUploadProgress(0);
-                            setIsUploading(false);
-                          }} 
-                          className="text-muted-foreground hover:text-destructive"
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Upload Type
+                      </label>
+                      <div className="flex space-x-4 mb-4">
+                        <button
+                          type="button"
+                          onClick={() => setUploadType('file')}
+                          className={`px-4 py-2 rounded-md ${
+                            uploadType === 'file'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
                         >
-                          <X size={20} />
+                          Upload File
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUploadType('link')}
+                          className={`px-4 py-2 rounded-md ${
+                            uploadType === 'link'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
+                        >
+                          Video Link
                         </button>
                       </div>
-                      {isUploading && (
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-[10px] font-black uppercase text-muted-foreground">
-                            <span>Uploading Asset...</span>
-                            <span>{uploadProgress}%</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-foreground transition-all duration-300" 
-                              style={{ width: `${uploadProgress}%` }}
-                            />
+                    </div>
+
+                    {uploadType === 'file' ? (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Content Type
+                        </label>
+                        <div className="flex space-x-4 mb-4">
+                          {['image', 'video', 'pdf'].map((type) => (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => setSelectedType(type as 'image' | 'video' | 'pdf')}
+                              className={`px-4 py-2 rounded-md ${
+                                selectedType === type
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                            >
+                              {type.charAt(0).toUpperCase() + type.slice(1)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {uploadType === 'file' ? (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Upload {selectedType}
+                        </label>
+                        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                          <div className="space-y-1 text-center">
+                            <svg
+                              className="mx-auto h-12 w-12 text-gray-400"
+                              stroke="currentColor"
+                              fill="none"
+                              viewBox="0 0 48 48"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                strokeWidth={2}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            <div className="flex text-sm text-gray-600">
+                              <label
+                                htmlFor="file-upload"
+                                className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                              >
+                                <span>Upload a file</span>
+                                <input
+                                  id="file-upload"
+                                  name="file-upload"
+                                  type="file"
+                                  className="sr-only"
+                                  onChange={handleFileChange}
+                                  accept={selectedType === 'image' ? 'image/*' : selectedType === 'video' ? 'video/*' : '.pdf'}
+                                />
+                              </label>
+                              <p className="pl-1">or drag and drop</p>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {selectedType === 'image'
+                                ? 'PNG, JPG, GIF up to 10MB'
+                                : selectedType === 'video'
+                                ? 'MP4, WebM up to 50MB'
+                                : 'PDF up to 20MB'}
+                            </p>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
-                    onChange={handleFileChange}
-                    accept={selectedType === "image" ? "image/*" : selectedType === "video" ? "video/*" : ".pdf"}
-                  />
+                        {fileName && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            Selected file: {fileName}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label htmlFor="video-url" className="block text-sm font-medium text-gray-700">
+                          Video URL
+                        </label>
+                        <input
+                          type="url"
+                          id="video-url"
+                          name="video-url"
+                          value={videoUrl}
+                          onChange={handleVideoUrlChange}
+                          placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Supported platforms: YouTube, Vimeo
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* 3. Details Form */}
                 <form onSubmit={handleSubmit} className="bg-card p-6 rounded-2xl border border-border space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1">
-                        <Type size={12} /> Asset Title
-                      </label>
-                      <input 
-                        className="w-full bg-muted/50 border border-border rounded-xl p-3 focus:ring-2 ring-foreground/20 outline-none font-medium text-foreground"
-                        value={formData.title}
-                        onChange={(e) => setFormData({...formData, title: e.target.value})}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1">
-                        <AlignLeft size={12} /> Detailed Description
-                      </label>
-                      <textarea 
-                        rows={3}
-                        className="w-full bg-muted/50 border border-border rounded-xl p-3 focus:ring-2 ring-foreground/20 outline-none font-medium text-sm resize-none text-foreground"
-                        value={formData.description}
-                        onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1">
-                        <Hash size={12} /> Metadata Tags
-                      </label>
-                      <input 
-                        placeholder="Separate with commas (e.g. FPS, Action)"
-                        className="w-full bg-muted/50 border border-border rounded-xl p-3 focus:ring-2 ring-foreground/20 outline-none font-medium text-foreground"
-                        value={formData.tags}
-                        onChange={(e) => setFormData({...formData, tags: e.target.value})}
-                      />
-                    </div>
-                    <button 
-                      type="submit"
-                      disabled={isUploading || !file}
-                      className="w-full bg-foreground text-background py-4 rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      {isUploading ? (
-                        <>
-                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Uploading...
-                        </>
-                      ) : (
-                        'Submit to Dashboard'
-                      )}
-                    </button>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1">
+                      <Type size={12} /> Asset Title
+                    </label>
+                    <input 
+                      className="w-full bg-muted/50 border border-border rounded-xl p-3 focus:ring-2 ring-foreground/20 outline-none font-medium text-foreground"
+                      value={formData.title}
+                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1">
+                      <AlignLeft size={12} /> Detailed Description
+                    </label>
+                    <textarea 
+                      rows={3}
+                      className="w-full bg-muted/50 border border-border rounded-xl p-3 focus:ring-2 ring-foreground/20 outline-none font-medium text-sm resize-none text-foreground"
+                      value={formData.description}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1">
+                      <Hash size={12} /> Metadata Tags
+                    </label>
+                    <input 
+                      placeholder="Separate with commas (e.g. FPS, Action)"
+                      className="w-full bg-muted/50 border border-border rounded-xl p-3 focus:ring-2 ring-foreground/20 outline-none font-medium text-foreground"
+                      value={formData.tags}
+                      onChange={(e) => setFormData({...formData, tags: e.target.value})}
+                    />
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={isUploading || (uploadType === 'file' ? !file : !videoUrl)}
+                    className="w-full bg-foreground text-background py-4 rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {isUploading ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Uploading...
+                      </>
+                    ) : (
+                      'Submit to Dashboard'
+                    )}
+                  </button>
                 </form>
               </div>
 
