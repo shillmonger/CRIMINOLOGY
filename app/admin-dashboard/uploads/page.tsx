@@ -22,6 +22,7 @@ export default function AdminContentUploadPage() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadType, setUploadType] = useState<'file' | 'link'>('file');
+  const [externalUrl, setExternalUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [formData, setFormData] = useState({
     title: "",
@@ -76,6 +77,62 @@ export default function AdminContentUploadPage() {
     }
   };
 
+  const handleExternalUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setExternalUrl(url);
+    
+    if (!url) {
+      setPreviewUrl(null);
+      return;
+    }
+    
+    try {
+      // Handle video URLs (YouTube/Vimeo)
+      if (selectedType === 'video' && (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com'))) {
+        let videoId = '';
+        
+        if (url.includes('youtube.com')) {
+          const urlObj = new URL(url);
+          videoId = urlObj.searchParams.get('v') || '';
+          if (!videoId && urlObj.hostname === 'youtu.be') {
+            videoId = urlObj.pathname.split('/').filter(Boolean)[0] || '';
+          }
+        } else if (url.includes('youtu.be')) {
+          const urlObj = new URL(url);
+          videoId = urlObj.pathname.split('/').filter(Boolean)[0] || '';
+        } else if (url.includes('vimeo.com')) {
+          const urlObj = new URL(url);
+          videoId = urlObj.pathname.split('/').filter(Boolean).pop() || '';
+        }
+        
+        if (videoId) {
+          const thumbnailUrl = url.includes('vimeo.com')
+            ? `https://vumbnail.com/${videoId}.jpg`
+            : `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+          
+          setPreviewUrl(thumbnailUrl);
+          return;
+        }
+      }
+      // Handle image URLs
+      else if (selectedType === 'image' && (url.match(/\.(jpeg|jpg|gif|png)$/) || url.includes('imgur.com'))) {
+        // For direct image links, use the URL as preview
+        setPreviewUrl(url);
+        return;
+      }
+      // Handle PDF URLs
+      else if (selectedType === 'pdf' && url.match(/\.(pdf)$/)) {
+        // For PDFs, we'll use a default thumbnail
+        setPreviewUrl('https://i.postimg.cc/pTC8whf0/download-(1).jpg');
+        return;
+      }
+    } catch (error) {
+      console.error('Error processing URL:', error);
+    }
+    
+    setPreviewUrl(null);
+  };
+
   const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const url = e.target.value;
     setVideoUrl(url);
@@ -120,11 +177,26 @@ export default function AdminContentUploadPage() {
     e.preventDefault();
     
     if (uploadType === 'file' && !file) {
-      return toast.error("Please upload a file first");
+      return toast.error(`Please upload a ${selectedType} file first`);
     }
     
-    if (uploadType === 'link' && !videoUrl) {
-      return toast.error("Please enter a video URL");
+    if (uploadType === 'link') {
+      if (!externalUrl) {
+        return toast.error(`Please enter a ${selectedType} URL`);
+      }
+      
+      // Additional validation for external URLs
+      try {
+        new URL(externalUrl);
+        if (selectedType === 'pdf' && !externalUrl.match(/\.pdf($|\?)/i)) {
+          return toast.error("Please enter a valid PDF URL (must end with .pdf)");
+        }
+        if (selectedType === 'image' && !externalUrl.match(/\.(jpeg|jpg|gif|png)($|\?)/i) && !externalUrl.includes('imgur.com')) {
+          return toast.error("Please enter a valid image URL (.jpg, .jpeg, .gif, .png or Imgur link)");
+        }
+      } catch (error) {
+        return toast.error("Please enter a valid URL");
+      }
     }
     
     if (isUploading) return toast.error("Please wait for upload to complete");
@@ -140,13 +212,13 @@ export default function AdminContentUploadPage() {
       if (uploadType === 'file' && file) {
         formDataToSend.append("file", file);
       } else if (uploadType === 'link') {
-        formDataToSend.append("videoUrl", videoUrl);
+        formDataToSend.append("externalUrl", externalUrl);
       }
       
       formDataToSend.append("title", formData.title);
       formDataToSend.append("description", formData.description);
       formDataToSend.append("tags", formData.tags);
-      formDataToSend.append("fileType", uploadType === 'link' ? 'video' : selectedType);
+      formDataToSend.append("fileType", selectedType);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -156,7 +228,7 @@ export default function AdminContentUploadPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to upload file');
+        throw new Error(result.error || `Failed to upload ${selectedType}`);
       }
 
       toast.success("Content uploaded successfully!");
@@ -170,7 +242,7 @@ export default function AdminContentUploadPage() {
       setFile(null);
       setFileName(null);
       setPreviewUrl(null);
-      setVideoUrl("");
+      setExternalUrl("");
       
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -260,7 +332,8 @@ export default function AdminContentUploadPage() {
                               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                           }`}
                         >
-                          Video Link
+                          {selectedType === 'image' ? 'Image Link' : 
+                           selectedType === 'video' ? 'Video Link' : 'PDF Link'}
                         </button>
                       </div>
                     </div>
@@ -344,20 +417,31 @@ export default function AdminContentUploadPage() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <label htmlFor="video-url" className="block text-sm font-medium text-gray-700">
-                          Video URL
+                        <label htmlFor="external-url" className="block text-sm font-medium text-gray-700">
+                          {selectedType === 'image' ? 'Image URL' : 
+                           selectedType === 'video' ? 'Video URL' : 'PDF URL'}
                         </label>
                         <input
                           type="url"
-                          id="video-url"
-                          name="video-url"
-                          value={videoUrl}
-                          onChange={handleVideoUrlChange}
-                          placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                          id="external-url"
+                          name="external-url"
+                          value={externalUrl}
+                          onChange={handleExternalUrlChange}
+                          placeholder={
+                            selectedType === 'image' 
+                              ? 'https://example.com/image.jpg' 
+                              : selectedType === 'video'
+                              ? 'https://youtube.com/watch?v=... or https://vimeo.com/...'
+                              : 'https://example.com/document.pdf'
+                          }
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                         />
                         <p className="text-xs text-gray-500">
-                          Supported platforms: YouTube, Vimeo
+                          {selectedType === 'image'
+                            ? 'Direct image link (.jpg, .jpeg, .gif, .png) or Imgur'
+                            : selectedType === 'video'
+                            ? 'Supported platforms: YouTube, Vimeo'
+                            : 'Direct PDF link (.pdf)'}
                         </p>
                       </div>
                     )}
@@ -402,7 +486,7 @@ export default function AdminContentUploadPage() {
                   </div>
                   <button 
                     type="submit"
-                    disabled={isUploading || (uploadType === 'file' ? !file : !videoUrl)}
+                    disabled={isUploading || (uploadType === 'file' ? !file : !externalUrl)}
                     className="w-full bg-foreground text-background py-4 rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
                   >
                     {isUploading ? (

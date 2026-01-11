@@ -60,41 +60,121 @@ export async function POST(req: Request) {
     const description = formData.get("description") as string;
     const tags = (formData.get("tags") as string)?.split(',').map(tag => tag.trim());
     const fileType = formData.get("fileType") as 'image' | 'video' | 'pdf';
-    const videoUrl = formData.get("videoUrl") as string | null;
+    const externalUrl = formData.get("externalUrl") as string | null;
 
-    if (!file && !videoUrl) {
-      return NextResponse.json({ error: "No file or video URL provided" }, { status: 400 });
+    if (!file && !externalUrl) {
+      return NextResponse.json({ error: "No file or external URL provided" }, { status: 400 });
     }
     
-    // Handle external video link
-    if (videoUrl) {
-      const videoInfo = getVideoInfo(videoUrl);
-      if (!videoInfo) {
-        return NextResponse.json({ error: "Invalid or unsupported video URL" }, { status: 400 });
+    // Handle external links (video, image, or PDF)
+    if (externalUrl) {
+      // For videos, use the existing getVideoInfo function
+      if (fileType === 'video') {
+        const videoInfo = getVideoInfo(externalUrl);
+        if (!videoInfo) {
+          return NextResponse.json({ error: "Invalid or unsupported video URL" }, { status: 400 });
+        }
+        
+        const content = new Content({
+          title,
+          description,
+          tags,
+          fileUrl: externalUrl,
+          thumbnailUrl: videoInfo.thumbnailUrl,
+          fileType: 'video',
+          sourceType: 'external_link',
+          uploadedBy: 'admin',
+        });
+        
+        await content.save();
+        
+        return NextResponse.json({
+          success: true,
+          data: {
+            id: content._id,
+            title: content.title,
+            url: content.fileUrl,
+            type: content.fileType,
+          }
+        });
       }
       
-      const content = new Content({
-        title,
-        description,
-        tags,
-        fileUrl: videoUrl,
-        thumbnailUrl: videoInfo.thumbnailUrl,
-        fileType: 'video',
-        sourceType: 'external_link',
-        uploadedBy: 'admin',
-      });
-      
-      await content.save();
-      
-      return NextResponse.json({
-        success: true,
-        data: {
-          id: content._id,
-          title: content.title,
-          url: content.fileUrl,
-          type: content.fileType,
+      // For images
+      if (fileType === 'image') {
+        // Validate image URL
+        try {
+          // Simple URL validation - you might want to enhance this
+          new URL(externalUrl);
+          if (!externalUrl.match(/\.(jpeg|jpg|gif|png)$/) && !externalUrl.includes('imgur.com')) {
+            return NextResponse.json({ error: "Invalid image URL. Only .jpg, .jpeg, .gif, .png or Imgur links are supported" }, { status: 400 });
+          }
+          
+          const content = new Content({
+            title,
+            description,
+            tags,
+            fileUrl: externalUrl,
+            thumbnailUrl: externalUrl, // Use the same URL for thumbnail
+            fileType: 'image',
+            sourceType: 'external_link',
+            uploadedBy: 'admin',
+          });
+          
+          await content.save();
+          
+          return NextResponse.json({
+            success: true,
+            data: {
+              id: content._id,
+              title: content.title,
+              url: content.fileUrl,
+              type: content.fileType,
+            }
+          });
+          
+        } catch (error) {
+          return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
         }
-      });
+      }
+      
+      // For PDFs
+      if (fileType === 'pdf') {
+        try {
+          // Simple URL validation - you might want to enhance this
+          new URL(externalUrl);
+          if (!externalUrl.match(/\.pdf$/i)) {
+            return NextResponse.json({ error: "Invalid PDF URL. Only .pdf links are supported" }, { status: 400 });
+          }
+          
+          const content = new Content({
+            title,
+            description,
+            tags,
+            fileUrl: externalUrl,
+            thumbnailUrl: PDF_THUMBNAIL_URL, // Use the default PDF thumbnail
+            fileType: 'pdf',
+            sourceType: 'external_link',
+            uploadedBy: 'admin',
+          });
+          
+          await content.save();
+          
+          return NextResponse.json({
+            success: true,
+            data: {
+              id: content._id,
+              title: content.title,
+              url: content.fileUrl,
+              type: content.fileType,
+            }
+          });
+          
+        } catch (error) {
+          return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+        }
+      }
+      
+      return NextResponse.json({ error: "Unsupported file type for external link" }, { status: 400 });
     }
     
     // Handle file upload (original functionality)
