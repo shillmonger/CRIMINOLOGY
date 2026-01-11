@@ -15,7 +15,7 @@ type UploadType = "image" | "video" | "pdf";
 
 export default function AdminContentUploadPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedType, setSelectedType] = useState<UploadType>("image");
+    const [selectedType, setSelectedType] = useState<UploadType | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [file, setFile] = useState<File | null>(null);
@@ -218,7 +218,9 @@ export default function AdminContentUploadPage() {
       formDataToSend.append("title", formData.title);
       formDataToSend.append("description", formData.description);
       formDataToSend.append("tags", formData.tags);
-      formDataToSend.append("fileType", selectedType);
+      if (selectedType) {
+        formDataToSend.append("fileType", selectedType);
+      }
 
       const response = await fetch('/api/upload', {
         method: 'POST',
