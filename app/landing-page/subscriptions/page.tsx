@@ -86,7 +86,7 @@ export default function SubscriptionPage() {
     const handleSelectPlan = (plan: string, amount: number, isLocked: boolean) => {
         if (isLocked) return;
         // Direct link to admin for upload service
-        window.open('https://t.me/istancapital', '_blank');
+        window.open('#', '_blank');
     };
 
     return ( 
