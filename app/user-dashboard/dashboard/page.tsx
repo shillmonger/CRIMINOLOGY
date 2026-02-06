@@ -127,49 +127,50 @@ export default function DashboardPage() {
             <div className="mb-12">
               <ThreeDCarousel
                 items={[
-                  {
-                    id: 1,
-                    src: "https://i.postimg.cc/4dYGvpFQ/Arcane-wallpaper.jpg",
-                    title: "Anime Collection",
-                    description: "Explore high-quality animations and cinematic Japanese art styles",
-                    tag: "Anime",
-                  },
-                  {
-                    id: 2,
-                    src: "https://i.postimg.cc/0j7LZnGM/Food.jpg",
-                    title: "Culinary Arts",
-                    description: "Gourmet food photography and professional kitchen workflows",
-                    tag: "Food",
-                  },
-                  {
-                    id: 3,
-                    src: "https://i.postimg.cc/YSjZTMft/download.jpg",
-                    title: "Sporting Excellence",
-                    description: "Dynamic action shots and high-performance athletic content",
-                    tag: "Sports",
-                  },
-                  {
-                    id: 4,
-                    src: "https://i.postimg.cc/Qxf9ZMd7/Screenshot-2026-01-07-125412.jpg",
-                    title: "Crime Scene Analysis",
-                    description: "Advanced techniques in forensic investigation",
-                    tag: "New",
-                  },
-                  {
-                    id: 5,
-                    src: "https://i.postimg.cc/GmzZjZzr/download-(7).jpg",
-                    title: "Digital Research Workspace",
-                    description: "A modern laboratory and data analysis environment showcasing investigative workflows",
-                    tag: "Popular",
-                  },
-                  {
-                    id: 6,
-                    src: "https://images.unsplash.com/photo-1588072432836-e10032774350?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80",
-                    title: "Forensic Science",
-                    description: "Latest tools and methodologies",
-                    tag: "Trending",
-                  },
-                ]}
+  {
+    id: 1,
+    src: "https://i.postimg.cc/nL8H3yVJ/download-(3).jpg",
+    title: "Forensic Evidence Lab",
+    description: "Close analysis of physical evidence using modern forensic techniques",
+    tag: "Forensics",
+  },
+  {
+    id: 2,
+    src: "https://i.postimg.cc/4dfRMZDT/download-(1).jpg",
+    title: "Crime Scene Documentation",
+    description: "Professional methods for recording and preserving crime scene details",
+    tag: "Investigation",
+  },
+  {
+    id: 3,
+    src: "https://i.postimg.cc/rmjMFzSv/Who-Killed-Markiplier.jpg",
+    title: "Case Reconstruction",
+    description: "Rebuilding events through digital forensics and witness analysis",
+    tag: "Cases",
+  },
+  {
+    id: 4,
+    src: "https://i.postimg.cc/6QdBgMT8/download-(2).jpg",
+    title: "Crime Scene Analysis",
+    description: "Systematic examination of scenes to uncover critical evidence",
+    tag: "New",
+  },
+  {
+    id: 5,
+    src: "https://i.postimg.cc/ZKMYd9XG/X-It-s-what-s-happening.jpg",
+    title: "Digital Forensics Center",
+    description: "Investigating cyber and digital evidence in modern crime cases",
+    tag: "Popular",
+  },
+  {
+    id: 6,
+    src: "https://i.postimg.cc/J4n403Yj/Leiche-ohne-Kopf-an-Elbufer-gefunden-Weitere-Details-bekannt.jpg",
+    title: "Forensic Investigation Unit",
+    description: "Advanced tools and scientific methods for criminal investigations",
+    tag: "Trending",
+  },
+]}
+
                 className="mb-12"
               />
             </div>
